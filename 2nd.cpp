@@ -9,7 +9,6 @@ typedef vector<Point> Contour;
 char winName[20] = "Live";
 Mat frame;
 VideoCapture cap;
-RNG rng(12345);
 int iLowH = 100;
 int iHighH = 140;
 int iLowS = 90;
