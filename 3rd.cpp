@@ -176,6 +176,7 @@ int main(int, char**)
 	cap >> frame;
 	imshow("Input", frame);
 	recConB(frame);
+	printCenter(bluelight);
 	waitKey(50);
 	}
 
