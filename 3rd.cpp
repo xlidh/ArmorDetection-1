@@ -144,9 +144,16 @@ void printCenter(vector<Contour> lights)
 		cout << "Neareat armor at <" << center.x << ", " << center.y << ">." << endl;
 	}
 }
+
+void threadB() // Thread to print center of blue armor
+{
+	while (1) 
+	{
+		printCenter(bluelight);
+	}
+}
 int main(int, char**)
 {
-
 	namedWindow("Control-----Blue", CV_WINDOW_AUTOSIZE);
 	cvCreateTrackbar("LowH", "Control-----Blue", &iLowH, 179); //Hue (0 - 179)
 	cvCreateTrackbar("HighH", "Control-----Blue", &iHighH, 179);
@@ -170,16 +177,26 @@ int main(int, char**)
 	if (!cap.isOpened())  // check if we succeeded
 	return -1;
 
+
+	// Second thread
+	thread tb(threadB);
+	tb.join;
+	
 	while (1)
 	{
 	cap.set(CAP_PROP_EXPOSURE, -extime);
 	cap >> frame;
 	imshow("Input", frame);
 	recConB(frame);
-	printCenter(bluelight);
+		
+	//If don't use thread, uncomment the following line
+	//printCenter(bluelight); 
+		
 	waitKey(50);
 	}
 
 
-  return 0;
+
+
+	return 0;
 }
