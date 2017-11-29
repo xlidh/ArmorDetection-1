@@ -180,7 +180,7 @@ int main(int, char**)
 
 	// Second thread
 	thread tb(threadB);
-	tb.join;
+	tb.join();
 	
 	while (1)
 	{
