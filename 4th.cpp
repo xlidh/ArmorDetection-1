@@ -174,6 +174,7 @@ void printCenter(vector<Contour> lights)
     if(paired.empty())
 	{
 		cout<< " no valid center"<<endl;
+	        // transmit empty center here
 	}
 	else
 	{
@@ -187,6 +188,7 @@ void printCenter(vector<Contour> lights)
 		  }
 	   }
 	   cout<<(*max)->center.x<<"      "<<(*max)->center.y<<endl;
+           // transmit valid center here
 	}
 }
 
