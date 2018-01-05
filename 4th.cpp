@@ -174,7 +174,7 @@ void printCenter(vector<Contour> lights)
     if(paired.empty())
 	{
 		cout<< " no valid center"<<endl;
-	        // transmit empty center here
+		// transmit center(empty) here
 	}
 	else
 	{
@@ -188,17 +188,11 @@ void printCenter(vector<Contour> lights)
 		  }
 	   }
 	   cout<<(*max)->center.x<<"      "<<(*max)->center.y<<endl;
-           // transmit valid center here
+	   //  transmit center here
 	}
 }
 
-void threadB() // Thread to print center of blue armor
-{
-	while (1) 
-	{
-		printCenter(bluelight);
-	}
-}
+
 int main(int, char**)
 {
 	namedWindow("Control-----Blue", CV_WINDOW_AUTOSIZE);
@@ -220,14 +214,12 @@ int main(int, char**)
 	cvCreateTrackbar("time", "Control-----Red", &extime, 17);
 
 
-	cap.open(1);
+	cap.open(0);
 	if (!cap.isOpened())  // check if we succeeded
 	return -1;
 
 
-	// Second thread
-	thread tb(threadB);
-	tb.join();
+
 	
 	while (1)
 	{
@@ -237,7 +229,7 @@ int main(int, char**)
 	recConB(frame);
 		
 	//If don't use thread, uncomment the following line
-	//printCenter(bluelight); 
+	printCenter(bluelight); 
 		
 	waitKey(50);
 	}
