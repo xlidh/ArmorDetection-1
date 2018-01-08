@@ -12,11 +12,11 @@ typedef vector<Point> Contour;
 char winName[20] = "Live";
 Mat frame;
 VideoCapture cap;
-int iLowH = 110;
-int iHighH = 140;
-int iLowS = 90;
-int iHighS = 250;
-int iLowV = 90;
+int iLowH = 70;
+int iHighH = 100;
+int iLowS = 0;
+int iHighS = 255;
+int iLowV = 240;
 int iHighV = 255;
 
 int RiLowH = 100;
@@ -51,19 +51,18 @@ void recConB(Mat input)
 	Mat imgThresholded;
 	inRange(tempHSV, Scalar(iLowH, iLowS, iLowV), Scalar(iHighH, iHighS, iHighV), imgThresholded);
 	imshow("HSV", imgThresholded);
-	GaussianBlur(imgThresholded, imgThresholded, Size(5, 5), 0, 0);
-	imshow("Gaussian", imgThresholded);
 	Mat element = getStructuringElement(MORPH_RECT, Size(3, 3));
+	erode(imgThresholded, imgThresholded, element);
 	dilate(imgThresholded, imgThresholded, element);
 	imshow("Dilate", imgThresholded);
 
 	findContours(imgThresholded, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-	cout << "contour.size: " << contours.size() << endl;
+	//cout << "contour.size: " << contours.size() << endl;
 	vector<Rect> boundRect(contours.size());
 
 	for (int i = 0; i < contours.size(); i++)
 	{
-		cout << "ContourSize: " << contours[i].size() << endl;
+		//cout << "ContourSize: " << contours[i].size() << endl;
 		boundRect[i] = boundingRect(contours[i]);
 		Mat temp = input(boundRect[i]);
 		Scalar mean = cv::mean(temp);
@@ -91,7 +90,7 @@ void recConR(Mat input)
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
 	findContours(clone, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
-	cout << "contour.size: " << contours.size() << endl;
+	//cout << "contour.size: " << contours.size() << endl;
 	vector<Rect> boundRect(contours.size());
 
 	for (int i = 0; i < contours.size(); i++)
@@ -124,14 +123,11 @@ void printCenter(vector<Contour> lights)
      vector<Pair*> pairs;
 	 vector<Pair*> paired;
 	 vector<Contour>::iterator pc = lights.begin();
-	 for(;pc<lights.end();pc++)
-	 {
-		 if(contourArea(*pc)<minContourSize)
-		 pc = lights.erase(pc);
-	 }
 	 for(pc = lights.begin();pc<lights.end();pc++)
 	 {
-		if(pc == lights.begin())
+		 if (contourArea(*pc) < minContourSize)
+			 continue;
+		 if(pc == lights.begin())
 		{
 			 Pair* temp = new Pair;
 			 temp-> addRect(*pc);
@@ -214,7 +210,7 @@ int main(int, char**)
 	cvCreateTrackbar("time", "Control-----Red", &extime, 17);
 
 
-	cap.open(0);
+	cap.open(1);
 	if (!cap.isOpened())  // check if we succeeded
 	return -1;
 
