@@ -10,26 +10,24 @@ using namespace cv;
 typedef vector<Point> Contour;
 
 char winName[20] = "Live";
-Mat frame;
-VideoCapture cap;
 int iLowH = 70;
 int iHighH = 100;
 int iLowS = 0;
 int iHighS = 255;
-int iLowV = 240;
+int iLowV = 250;
 int iHighV = 255;
 
-int RiLowH = 100;
-int RiHighH = 140;
-int RiLowS = 90;
-int RiHighS = 255;
-int RiLowV = 90;
+int RiLowH = 0;
+int RiHighH = 35;
+int RiLowS =10;
+int RiHighS = 192;
+int RiLowV = 250;
 int RiHighV = 255;
 
 int extime = 10;
 vector<Contour> bluelight;
 vector<Contour> redlight;
-int minContourSize = 20;
+int minContourSize = 100;
 void recConB(Mat input)
 {
 	bluelight.clear();
@@ -53,8 +51,9 @@ void recConB(Mat input)
 	imshow("HSV", imgThresholded);
 	Mat element = getStructuringElement(MORPH_RECT, Size(3, 3));
 	erode(imgThresholded, imgThresholded, element);
+        element = getStructuringElement(MORPH_RECT, Size(5, 5));
 	dilate(imgThresholded, imgThresholded, element);
-	imshow("Dilate", imgThresholded);
+	//imshow("Dilate", imgThresholded);
 
 	findContours(imgThresholded, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 	//cout << "contour.size: " << contours.size() << endl;
@@ -81,104 +80,130 @@ void recConB(Mat input)
 void recConR(Mat input)
 {
 	redlight.clear();
+
 	Mat clone;
 	cvtColor(input, clone, CV_RGB2GRAY);
 	threshold(clone, clone, 100, 255, THRESH_BINARY);
-	Mat element = getStructuringElement(MORPH_RECT, Size(5, 1));
-	dilate(clone, clone, element);
-	imshow("Dilate", clone);
+
 	vector<vector<Point> > contours;
 	vector<Vec4i> hierarchy;
-	findContours(clone, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
+
+
+	Mat tempHSV;
+	vector<Mat> hsvSplit;
+	cvtColor(input, tempHSV, COLOR_BGR2HSV);
+	split(tempHSV, hsvSplit);
+	equalizeHist(hsvSplit[2], hsvSplit[2]);
+	merge(hsvSplit, tempHSV);
+	Mat imgThresholded;
+	inRange(tempHSV, Scalar(RiLowH, RiLowS, RiLowV), Scalar(RiHighH, RiHighS, RiHighV), imgThresholded);
+	imshow("HSV", imgThresholded);
+	Mat element = getStructuringElement(MORPH_RECT, Size(3, 3));
+	erode(imgThresholded, imgThresholded, element);
+        element = getStructuringElement(MORPH_RECT, Size(5, 5));
+	dilate(imgThresholded, imgThresholded, element);
+	//imshow("Dilate", imgThresholded);
+
+	findContours(imgThresholded, contours, RETR_EXTERNAL, CHAIN_APPROX_SIMPLE);
 	//cout << "contour.size: " << contours.size() << endl;
 	vector<Rect> boundRect(contours.size());
 
 	for (int i = 0; i < contours.size(); i++)
 	{
+		//cout << "ContourSize: " << contours[i].size() << endl;
 		boundRect[i] = boundingRect(contours[i]);
 		Mat temp = input(boundRect[i]);
-		Mat tempHSV;
-		vector<Mat> hsvSplit;
-		cvtColor(temp, tempHSV, COLOR_BGR2HSV);
-		split(tempHSV, hsvSplit);
-		equalizeHist(hsvSplit[2], hsvSplit[2]);
-		merge(hsvSplit, tempHSV);
-		Mat imgThresholded;
-		inRange(tempHSV, Scalar(RiLowH, RiLowS, RiLowV), Scalar(RiHighH, RiHighS, RiHighV), imgThresholded);
-		Scalar mean = cv::mean(imgThresholded);
-		if (mean[0] > 100)
+		Scalar mean = cv::mean(temp);
+		if (mean[0] > 30)
 		{
 			redlight.push_back(contours[i]);
 		}
 	}
-	for (int i = 0; i <redlight.size(); i++)
+	for (int i = 0; i < redlight.size(); i++)
 	{
 		rectangle(input, boundingRect(redlight[i]), Scalar(0, 0, 255), 2);
 	}
-	imshow("frameR", input);
+	imshow("frameB", input);
 	waitKey(10);
 }
-void printCenter(vector<Contour> lights)
+
+
+void printCenter(vector<Contour> lights,Mat input)
 {
+     vector<RotatedRect> rects;
      vector<Pair*> pairs;
-	 vector<Pair*> paired;
-	 vector<Contour>::iterator pc = lights.begin();
-	 for(pc = lights.begin();pc<lights.end();pc++)
-	 {
-		 if (contourArea(*pc) < minContourSize)
-			 continue;
-		 if(pc == lights.begin())
-		{
-			 Pair* temp = new Pair;
-			 temp-> addRect(*pc);
-			 pairs.push_back(temp);
-			 continue;
-		}
-		vector<Pair*>::iterator pp = pairs.begin();
-		bool matcha = false;
-		for(;pp<pairs.end();pp++)
-		{
-            if( (*pp)->match(*pc) )
-			{
-				matcha =true;
-				break;
-			}
-		}
-		if(matcha)
-		{
-			continue;
-		}
+     for(vector<Contour>::iterator p = lights.begin();p<lights.end();p++)
+     {
+            if( contourArea(*p) < 100)
+            continue;
+            RotatedRect temp;
+            temp = minAreaRect(*p);
+            rects.push_back(temp);
+     }
+     for(vector<RotatedRect>::iterator p = rects.begin();p< (rects.end()-1);p++)
+     {
+        double preD = -1;
+        double preR = -1;
+            for(vector<RotatedRect>::iterator q = (p + 1) ; q<rects.end() ; q ++)
+           {
+               	float angleOne = (*p).angle;
+        	float angleTwo = (*q).angle;
+ 		float dif = angleOne - angleTwo;
+                float area1 = (*p).size.height * (*p).size.width;
+                float area2 = (*q).size.height * (*q).size.width;
+                float r = area1/area2;
+                if(dif*dif < 100 && r < 3 && r > 0.3)
+                {
+                    if(preD == -1)
+                    {
+                       Pair* temp = new Pair;
+                       temp->memberOne = new RotatedRect;
+                       temp->memberTwo = new RotatedRect;
+                       *(temp->memberTwo) = *q;
+                       *(temp->memberOne) = *p;
+                       temp->isCompeleted = true;
+                       pairs.push_back(temp);
+                       preD = dif;
+                       preR = r;
+                    }
+                    if(preD > dif && preR > r)
+                    {
+                       RotatedRect* temp = new RotatedRect;
+                       *temp = *q;
+                       delete (*pairs.end())->memberTwo;
+                       (*pairs.end())->memberTwo = temp;
+                       preD = dif;
+                       preR = r;
+                    }
+                      
+                }
+           }
+    
+     }
+     for(vector<Pair*>::iterator p = pairs.begin();p<pairs.end();p++)
+     {
+            (*p)->id = (*p)->findID();
+            (*p)-> size = (*p)->findSize();
+            (*p)-> center =(*p)-> findCenter();
+     }
+        
 
-		Pair* temp = new Pair;
-		temp-> addRect(*pc);
-		pairs.push_back(temp);
-		continue;
-    }
-	vector<Pair*>::iterator pp = pairs.begin();
 
-	for(vector<Pair*>::iterator pp = pairs.begin();pp<pairs.end();pp++)
-	{
-     if((*pp)->isCompeleted)
-	 {
-		 paired.push_back(*pp);
-	 }
-	 else
-	 {
-		 delete *pp;
-	 }
-	}
-    if(paired.empty())
+
+         if(pairs.empty())
 	{
 		cout<< " no valid center"<<endl;
 		// transmit center(empty) here
 	}
 	else
 	{
-	   vector<Pair*>::iterator p = paired.begin();
+	   vector<Pair*>::iterator p = pairs.begin();
 	   vector<Pair*>::iterator max = p;
-	   for(;p<paired.end();p++)
+	   for(;p<pairs.end();p++)
 	   {
-		  if((*p)->size >= (*max)->size)
+		  if((*p)->memberOne->angle < 30)
+                  continue;
+                  if((*p)->size >= (*max)->size)
 		  {
 			 max = p;
 		  }
@@ -189,9 +214,11 @@ void printCenter(vector<Contour> lights)
 }
 
 
-int main(int, char**)
+
+int main(int a, char**)
 {
-	namedWindow("Control-----Blue", CV_WINDOW_AUTOSIZE);
+
+       namedWindow("Control-----Blue", CV_WINDOW_AUTOSIZE);
 	cvCreateTrackbar("LowH", "Control-----Blue", &iLowH, 179); //Hue (0 - 179)
 	cvCreateTrackbar("HighH", "Control-----Blue", &iHighH, 179);
 	cvCreateTrackbar("LowS", "Control-----Blue", &iLowS, 255); //Saturation (0 - 255)
@@ -201,33 +228,39 @@ int main(int, char**)
 	cvCreateTrackbar("time", "Control-----Blue", &extime, 17);
 
 	namedWindow("Control-----Red", CV_WINDOW_AUTOSIZE);
-	cvCreateTrackbar("LowH", "Control-----Red", &iLowH, 179); //Hue (0 - 179)
-	cvCreateTrackbar("HighH", "Control-----Red", &iHighH, 179);
-	cvCreateTrackbar("LowS", "Control-----Red", &iLowS, 255); //Saturation (0 - 255)
-	cvCreateTrackbar("HighS", "Control-----Red", &iHighS, 255);
-	cvCreateTrackbar("LowV", "Control-----Red", &iLowV, 255); //Value (0 - 255)
-	cvCreateTrackbar("HighV", "Control-----Red", &iHighV, 255);
+	cvCreateTrackbar("LowH", "Control-----Red", &RiLowH, 179); //Hue (0 - 179)
+	cvCreateTrackbar("HighH", "Control-----Red", &RiHighH, 179);
+	cvCreateTrackbar("LowS", "Control-----Red", &RiLowS, 255); //Saturation (0 - 255)
+	cvCreateTrackbar("HighS", "Control-----Red", &RiHighS, 255);
+	cvCreateTrackbar("LowV", "Control-----Red", &RiLowV, 255); //Value (0 - 255)
+	cvCreateTrackbar("HighV", "Control-----Red", &RiHighV, 255);
 	cvCreateTrackbar("time", "Control-----Red", &extime, 17);
 
 
-	cap.open(1);
-	if (!cap.isOpened())  // check if we succeeded
-	return -1;
-
+ VideoCapture cap(0); // open the default camera
+    if(!cap.isOpened())  // check if we succeeded
+        return -1;
 
 
 	
 	while (1)
 	{
-	cap.set(CAP_PROP_EXPOSURE, -extime);
+        Mat frame;
+
 	cap >> frame;
-	imshow("Input", frame);
-	recConB(frame);
+	//imshow("Input", frame);
+	if(a == 0)
+        {
+        recConB(frame);
+	printCenter(bluelight,frame); 
+        }
+        //if(a == 1)
+        //{
+        recConR(frame);
+	printCenter(redlight,frame);
+        //}
 		
-	//If don't use thread, uncomment the following line
-	printCenter(bluelight); 
-		
-	waitKey(50);
+	waitKey(100);
 	}
 
 

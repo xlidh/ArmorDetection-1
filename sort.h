@@ -46,33 +46,7 @@ class Pair
         }
     }
 
-    bool match(Contour& contour)//如果匹配的不是最合适的边怎么办
-    {
-        if(isCompeleted)
-        return false;
-        if(memberOne == NULL)
-        return false;
 
-        float angleOne = memberOne -> angle;
-        RotatedRect* temp = new RotatedRect;
-        *temp = minAreaRect(contour);
-        float angleTwo = temp -> angle;
-        float dif = angleOne - angleTwo;
-        if(dif*dif > 100 )
-        {
-            delete temp;
-            return false;
-        }
-        if(dif*dif <= 100)
-        {
-            memberTwo = temp;
-            isCompeleted = true;
-            id = findID();
-            size = findSize();
-            center = findCenter();
-            return true;
-        }
-    }
 
     ID findID()
     {
@@ -89,8 +63,8 @@ class Pair
     Point findCenter()
     {
        Point center;
-       center.x = (memberOne->center.x - memberTwo->center.x)/2;
-       center.y = (memberOne->center.y - memberTwo->center.y)/2;
+       center.x = (memberOne->center.x + memberTwo->center.x)/2;
+       center.y = (memberOne->center.y + memberTwo->center.y)/2;
        return center;
     }
     
@@ -101,3 +75,5 @@ class Pair
          return distance*h;
     }
 };
+
+
